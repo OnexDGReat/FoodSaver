@@ -12,7 +12,7 @@ import { SavedAddress } from '../types/user';
 import { storage } from '../lib/firebase';
 import { AvatarUpload } from '../components/AvatarUpload';
 import { SkeletonProfile } from '../components/SkeletonProfile';
-import { useToast } from '../hooks/useToast';
+import { useToast } from '../context/ToastContext';
 import { MapPicker } from '../components/MapPicker';
 
 type ViewState = 'main' | 'addresses' | 'payments' | 'sustainability' | 'settings' | 'edit-profile' | 'add-address' | 'add-payment' | 'edit-address';
@@ -21,7 +21,7 @@ export function Profile() {
   const { profile, user, logout, updateProfileData, updateSettings, updateEmailAddress, updateUserPassword, profileLoading, refreshProfile } = useAuth();
   const { addresses, addAddress, deleteAddress, updateAddress, setDefault, loading: addressLoading } = useAddresses();
   const { payments, addPaymentMethod, deletePaymentMethod, loading: paymentLoading } = usePayments();
-  const { toasts, addToast, removeToast } = useToast();
+  const { showToast } = useToast();
   
   const [view, setView] = useState<ViewState>('main');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -74,23 +74,23 @@ export function Profile() {
       if (field === 'name') {
         if (!editName.trim()) throw new Error("Name cannot be empty");
         await updateProfileData({ displayName: editName });
-        addToast("Name updated!", "success");
+        showToast("Name updated!", "success");
       } else if (field === 'email') {
         await updateEmailAddress(editEmail);
-        addToast("Email updated!", "success");
+        showToast("Email updated!", "success");
       } else if (field === 'password') {
         if (editPassword.length < 6) throw new Error("Password must be at least 6 characters");
         await updateUserPassword(editPassword);
         setEditPassword('');
-        addToast("Password updated!", "success");
+        showToast("Password updated!", "success");
       }
       setEditingField(null);
     } catch (error: any) {
       console.error(error);
       if (error.code === 'auth/requires-recent-login') {
-        addToast("Please log out and back in to change sensitive info.", "error");
+        showToast("Please log out and back in to change sensitive info.", "error");
       } else {
-        addToast(error.message || "Update failed.", "error");
+        showToast(error.message || "Update failed.", "error");
       }
     } finally {
       setIsUpdating(false);
@@ -114,13 +114,13 @@ export function Profile() {
         lat: pinnedLat,
         lng: pinnedLng
       });
-      addToast("Address updated!", "success");
+      showToast("Address updated!", "success");
       setEditingAddress(null);
       setAddressDetails('');
       setView('addresses');
     } catch (error: any) {
       console.error(error);
-      addToast(error.message || "Failed to update address.", "error");
+      showToast(error.message || "Failed to update address.", "error");
     } finally {
       setIsUpdating(false);
     }
@@ -138,10 +138,10 @@ export function Profile() {
       });
       setAddressDetails('');
       setView('addresses');
-      addToast("Address added!", "success");
+      showToast("Address added!", "success");
     } catch (error: any) {
       console.error(error);
-      addToast(error.message || "Failed to add address.", "error");
+      showToast(error.message || "Failed to add address.", "error");
     }
   };
 
@@ -156,10 +156,10 @@ export function Profile() {
       });
       setQuickAddressDetails('');
       setIsQuickAdding(false);
-      addToast("Address added!", "success");
+      showToast("Address added!", "success");
     } catch (error: any) {
       console.error(error);
-      addToast(error.message || "Failed to add address.", "error");
+      showToast(error.message || "Failed to add address.", "error");
     } finally {
       setIsUpdating(false);
     }
@@ -167,12 +167,12 @@ export function Profile() {
 
   const handleAddPayment = async () => {
     if (!paymentLabel) {
-      addToast("Please provide a name/label for this account", "error");
+      showToast("Please provide a name/label for this account", "error");
       return;
     }
 
     if (paymentType === 'card' && (!paymentCardNumber || !paymentExpiry)) {
-      addToast("Please provide card number and expiry date", "error");
+      showToast("Please provide card number and expiry date", "error");
       return;
     }
 
@@ -200,10 +200,10 @@ export function Profile() {
       setPaymentExpiry('');
       setPaymentCVV('');
       setView('payments');
-      addToast("Payment method added!", "success");
+      showToast("Payment method added!", "success");
     } catch (error: any) {
       console.error(error);
-      addToast(error.message || "Failed to add payment method.", "error");
+      showToast(error.message || "Failed to add payment method.", "error");
     }
   };
 
@@ -230,7 +230,7 @@ export function Profile() {
                 uid={user.uid}
                 onUploadSuccess={(url) => {
                   updateProfileData({ photoURL: url });
-                  addToast("Photo updated!", "success");
+                  showToast("Photo updated!", "success");
                 }}
               />
 
@@ -914,7 +914,7 @@ export function Profile() {
                 {['Privacy Policy', 'Terms of Service'].map(page => (
                   <button 
                     key={page} 
-                    onClick={() => addToast(`Opening ${page}...`, "info")}
+                    onClick={() => showToast(`Opening ${page}...`, "info")}
                     className="w-full h-16 flex items-center justify-between p-5 bg-white border border-gray-100 rounded-3xl hover:border-gray-300 transition-all group"
                   >
                     <span className="font-bold text-gray-700">{page}</span>
@@ -989,7 +989,7 @@ export function Profile() {
                 uid={user.uid}
                 onUploadSuccess={(url) => {
                   updateProfileData({ photoURL: url });
-                  addToast("Photo updated!", "success");
+                  showToast("Photo updated!", "success");
                 }}
               />
             </div>
@@ -1055,28 +1055,6 @@ export function Profile() {
 
   return (
     <div className="p-6 min-h-full bg-white flex flex-col items-center pt-8 overflow-y-auto font-sans pb-32 relative">
-      {/* Toast Container */}
-      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-full max-w-[320px]">
-        {toasts.map(toast => (
-          <motion.div
-            key={toast.id}
-            initial={{ opacity: 0, y: -20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className={cn(
-              "p-4 rounded-2xl shadow-xl flex items-center gap-3 font-bold text-sm",
-              toast.type === 'success' ? "bg-green-500 text-white" : 
-              toast.type === 'error' ? "bg-red-500 text-white" : 
-              "bg-gray-900 text-white"
-            )}
-          >
-            {toast.type === 'success' && <CheckCircle2 size={18} />}
-            {toast.type === 'error' && <AlertCircle size={18} />}
-            <span>{toast.message}</span>
-          </motion.div>
-        ))}
-      </div>
-
       <AnimatePresence mode="wait">
         <motion.div 
           key={view}

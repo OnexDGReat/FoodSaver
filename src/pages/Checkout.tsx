@@ -10,7 +10,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { writeBatch, doc, increment, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { useToast } from '../hooks/useToast';
+import { useToast } from '../context/ToastContext';
 import { ConfirmationDialog } from '../components/ui/ConfirmationDialog';
 import { formatCurrency, cn } from '../lib/utils';
 import { RIDERS } from '../constants/riders';
@@ -24,7 +24,7 @@ export function Checkout() {
   const { addresses } = useAddresses();
   const { payments, addPaymentMethod } = usePayments();
   const { total, count, items, clearCart } = useCart();
-  const { addToast } = useToast();
+  const { showToast } = useToast();
 
   // Auto-select default address on mount
   useEffect(() => {
@@ -69,7 +69,7 @@ export function Checkout() {
   
   const onAddAddress = async () => {
     if (!addressDetails.trim()) {
-      addToast("Please enter address details", "error");
+      showToast("Please enter address details", "error");
       return;
     }
     try {
@@ -82,20 +82,20 @@ export function Checkout() {
       });
       setShowAddAddressModal(false);
       setAddressDetails('');
-      addToast("Address added!", "success");
+      showToast("Address added!", "success");
     } catch (error: any) {
-      addToast(error.message || "Failed to save address", "error");
+      showToast(error.message || "Failed to save address", "error");
     }
   };
 
   const onAddPayment = async () => {
     if (!paymentLabel.trim()) {
-      addToast("Please provide a name/label for this account", "error");
+      showToast("Please provide a name/label for this account", "error");
       return;
     }
 
     if (paymentMethod === 'card' && (!paymentCardNumber || !paymentExpiry)) {
-      addToast("Please provide card number and expiry date", "error");
+      showToast("Please provide card number and expiry date", "error");
       return;
     }
 
@@ -126,9 +126,9 @@ export function Checkout() {
       setPaymentExpiry('');
       setPaymentCVV('');
       setShowAddPaymentModal(false);
-      addToast("Payment method added!", "success");
+      showToast("Payment method added!", "success");
     } catch (error: any) {
-      addToast(error.message || "Failed to add payment method", "error");
+      showToast(error.message || "Failed to add payment method", "error");
     }
   };
 
@@ -146,7 +146,7 @@ export function Checkout() {
 
     // Enforce Address for Delivery
     if (deliveryType === 'delivery' && addresses.length === 0) {
-      addToast("Please provide a delivery address", "error");
+      showToast("Please provide a delivery address", "error");
       setShowAddAddressModal(true);
       return;
     }
@@ -155,7 +155,7 @@ export function Checkout() {
     if (paymentMethod !== 'cod') {
       const isSavedMethod = payments.some(p => p.id === paymentMethod);
       if (!isSavedMethod) {
-        addToast(`Please provide details for ${paymentMethod.toUpperCase()}`, "error");
+        showToast(`Please provide details for ${paymentMethod.toUpperCase()}`, "error");
         setShowAddPaymentModal(true);
         return;
       }

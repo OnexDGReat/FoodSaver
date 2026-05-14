@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, MapPin, Phone, MessageSquare, Package, Truck, CheckCircle2, Clock, Check, Timer } from 'lucide-react';
+import { ChevronLeft, MapPin, Phone, MessageSquare, Package, Truck, CheckCircle2, Clock, Check, Timer, Map as MapIcon } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { cn } from '../lib/utils';
@@ -11,7 +11,7 @@ import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Button } from '../components/ui/Button';
 import { useOrderManager } from '../context/OrderManagerContext';
-import { format, addMinutes } from 'date-fns';
+import { format, addMinutes, addSeconds } from 'date-fns';
 
 import { StarRating } from '../components/StarRating';
 import { useToast } from '../context/ToastContext';
@@ -102,10 +102,17 @@ export function OrderTracking() {
   const { showToast } = useToast();
   const [showNearbyPopup, setShowNearbyPopup] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const requestRef = useRef<number>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
+    const update = () => {
+      setNow(Date.now());
+      requestRef.current = requestAnimationFrame(update);
+    };
+    requestRef.current = requestAnimationFrame(update);
+    return () => {
+       if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    };
   }, []);
 
   const DEFAULT_DEST: [number, number] = [7.0877, 125.6178];
@@ -118,7 +125,7 @@ export function OrderTracking() {
     return DEFAULT_DEST;
   }, [liveOrder?.address]);
 
-  const { currentStatusIndex, riderPos, timeRemainingSec, totalDurationSec, prepRemainingSec, travelRemainingSec } = useMemo(() => {
+  const { currentStatusIndex, riderPos, timeRemainingSec, totalDurationSec, prepRemainingSec, travelRemainingSec, totalProgress } = useMemo(() => {
     const totalSimDuration = PREPARING_DURATION + DELIVERING_DURATION;
     if (!liveOrder?.createdAt) return { 
       currentStatusIndex: 0, 
@@ -126,7 +133,8 @@ export function OrderTracking() {
       timeRemainingSec: totalSimDuration, 
       totalDurationSec: totalSimDuration,
       prepRemainingSec: PREPARING_DURATION,
-      travelRemainingSec: DELIVERING_DURATION
+      travelRemainingSec: DELIVERING_DURATION,
+      totalProgress: 0
     };
     
     const createdTime = liveOrder.createdAt?.toDate?.()?.getTime() || 
@@ -138,6 +146,7 @@ export function OrderTracking() {
     let remaining = Math.max(totalSimDuration - elapsedSec, 0);
     let pRem = Math.max(PREPARING_DURATION - elapsedSec, 0);
     let tRem = DELIVERING_DURATION;
+    let progress = elapsedSec / totalSimDuration;
 
     if (elapsedSec > PREPARING_DURATION + DELIVERING_DURATION) {
       statusIndex = 2; // Delivered
@@ -145,13 +154,14 @@ export function OrderTracking() {
       remaining = 0;
       pRem = 0;
       tRem = 0;
+      progress = 1;
     } else if (elapsedSec > PREPARING_DURATION) {
       statusIndex = 1; // Delivering
       const travelElapsed = elapsedSec - PREPARING_DURATION;
-      const progress = Math.min(travelElapsed / DELIVERING_DURATION, 1);
+      const travelProgress = Math.min(travelElapsed / DELIVERING_DURATION, 1);
       pos = [
-        startPos[0] + (destPos[0] - startPos[0]) * progress,
-        startPos[1] + (destPos[1] - startPos[1]) * progress
+        startPos[0] + (destPos[0] - startPos[0]) * travelProgress,
+        startPos[1] + (destPos[1] - startPos[1]) * travelProgress
       ];
       remaining = Math.max(totalSimDuration - elapsedSec, 0);
       tRem = Math.max(DELIVERING_DURATION - travelElapsed, 0);
@@ -165,9 +175,10 @@ export function OrderTracking() {
       prepRemainingSec: Math.round(pRem),
       travelRemainingSec: Math.round(tRem),
       timeRemainingMin: Math.ceil(remaining / 60),
-      totalDurationSec: totalSimDuration
+      totalDurationSec: totalSimDuration,
+      totalProgress: Math.min(progress, 1)
     };
-  }, [liveOrder, now]);
+  }, [liveOrder, now, destPos]);
 
   useEffect(() => {
     if (currentStatusIndex === 1) {
@@ -200,6 +211,12 @@ export function OrderTracking() {
     } finally {
       setIsCompleting(false);
     }
+  };
+
+  const formatCountdown = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = Math.floor(totalSeconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const currentStatus = STATUS_STEPS[currentStatusIndex];
@@ -285,14 +302,20 @@ export function OrderTracking() {
               </span>
               <span className="font-black italic text-base text-gray-900">
                 {currentStatusIndex === 2 ? 'Arrived' : currentStatusIndex === 0 ? (
-                  <>
-                    {Math.ceil(prepRemainingSec / 60)} <span className="text-[10px] not-italic ml-1 opacity-50 tracking-normal uppercase">mins</span>
-                  </>
+                  <div className="flex items-baseline gap-1">
+                    {formatCountdown(prepRemainingSec)}
+                    <span className="text-[10px] not-italic opacity-50 tracking-normal uppercase">left</span>
+                  </div>
                 ) : liveOrder?.createdAt ? (
-                  <>
-                    {format(addMinutes(liveOrder.createdAt?.toDate?.() || new Date(liveOrder.createdAt), Math.ceil(totalDurationSec / 60)), 'h:mm a')}
-                    <span className="text-[10px] not-italic ml-1 opacity-50">({Math.ceil(travelRemainingSec / 60)}m away)</span>
-                  </>
+                  <div className="flex flex-col">
+                    <div className="flex items-baseline gap-1">
+                      {format(addSeconds(liveOrder.createdAt?.toDate?.() || new Date(liveOrder.createdAt), totalDurationSec / SIMULATION_SPEED), 'h:mm:ss a')}
+                    </div>
+                    <div className="text-[10px] font-bold text-primary flex items-center gap-1">
+                      <Clock size={10} />
+                      {formatCountdown(travelRemainingSec)} simulation time
+                    </div>
+                  </div>
                 ) : 'Calculating...'}
               </span>
             </div>
@@ -358,9 +381,9 @@ export function OrderTracking() {
                className="absolute left-10 top-12 w-0.5 bg-primary rounded-full origin-top"
                initial={{ scaleY: 0 }}
                animate={{ 
-                 scaleY: currentStatusIndex / (STATUS_STEPS.length - 1) 
+                 scaleY: totalProgress
                }}
-               transition={{ duration: 1, ease: "circOut" }}
+               transition={{ duration: 0.1, ease: "linear" }}
                style={{ 
                  height: "calc(100% - 6rem)", // Adjust based on padding/gap
                }}
