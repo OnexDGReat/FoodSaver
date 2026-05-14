@@ -1,0 +1,6 @@
+{
+  "name": "FoodSaver",
+  "description": "A food rescue delivery platform connecting hungry users with discounted surplus meals from local restaurants to reduce food waste.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": []
+}

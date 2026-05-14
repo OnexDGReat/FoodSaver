@@ -1,0 +1,67 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isValidUser(data) {
+      return data.uid is string && data.email is string && data.email.size() <= 256;
+    }
+
+    function isValidOrder(data) {
+      return data.id is string && 
+             data.userId == request.auth.uid && 
+             data.status in ['preparing', 'delivering', 'completed', 'cancelled'] &&
+             data.total is number && 
+             data.items is list &&
+             data.createdAt == request.time;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && (
+        // Action: Update Profile
+        (incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL'])) ||
+        // Action: Update Stats
+        (incoming().diff(existing()).affectedKeys().hasOnly(['mealsSaved', 'savedCO2', 'settings'])) ||
+        // Action: Update Settings
+        (incoming().diff(existing()).affectedKeys().hasOnly(['paymentMethods', 'savedAddresses']))
+      );
+    }
+
+    // Orders
+    match /orders/{orderId} {
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidOrder(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && (
+        // Action: Update Status (Simulation or Manual Receipt)
+        (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt', 'completedAt', 'cancelledAt']) &&
+         incoming().status in ['preparing', 'delivering', 'completed', 'cancelled'] &&
+         (incoming().updatedAt == request.time || 
+          incoming().completedAt == request.time || 
+          incoming().cancelledAt == request.time))
+      );
+    }
+  }
+}
