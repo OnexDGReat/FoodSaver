@@ -202,33 +202,10 @@ export function Login() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full h-14" disabled={loading || googleLoading}>
+            <Button type="submit" className="w-full h-14" disabled={loading}>
               {loading ? <Loader2 className="animate-spin" /> : "Sign In"}
             </Button>
           </form>
-
-          <div className="relative py-2">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-100"></div>
-            </div>
-            <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest">
-              <span className="bg-[#FAFAF7] px-4 text-gray-300">Or continue with</span>
-            </div>
-          </div>
-
-          <Button 
-            variant="outline" 
-            onClick={handleGoogleLogin} 
-            className="w-full h-14 flex items-center justify-center gap-3"
-            disabled={loading || googleLoading}
-          >
-            {googleLoading ? <Loader2 className="animate-spin" /> : (
-              <>
-                <Chrome size={20} />
-                <span>Google</span>
-              </>
-            )}
-          </Button>
         </div>
 
         <div className="text-center">
