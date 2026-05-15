@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Compass, ShoppingBag, User, Sparkles } from 'lucide-react';
+import { Home, Compass, ShoppingBag, User } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -54,7 +54,6 @@ export function Layout({ children }: { children: ReactNode }) {
         <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[450px] bg-white/95 border-t border-gray-100 flex items-center justify-around h-20 px-4 backdrop-blur-md safe-area-bottom z-50">
           <NavItem to="/" icon={Home} label="Home" active={location.pathname === '/'} />
           <NavItem to="/explore" icon={Compass} label="Explore" active={location.pathname === '/explore'} />
-          <NavItem to="/ai-picks" icon={Sparkles} label="AI Picks" active={location.pathname === '/ai-picks'} />
           <NavItem to="/orders" icon={ShoppingBag} label="Orders" active={location.pathname === '/orders'} />
           <NavItem to="/profile" icon={User} label="Profile" active={location.pathname === '/profile'} onHover={refreshProfile} />
         </nav>

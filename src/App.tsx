@@ -15,7 +15,6 @@ import { Checkout } from './pages/Checkout';
 import { Explore } from './pages/Explore';
 import { OrderTracking } from './pages/OrderTracking';
 import { Orders } from './pages/Orders';
-import { AIRecommendations } from './pages/AIRecommendations';
 import { CartProvider } from './context/CartContext';
 import { Card } from './components/ui/Card';
 
@@ -61,7 +60,6 @@ export default function App() {
               <Route path="/tracking" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>} />
               <Route path="/explore" element={<ProtectedRoute><Explore /></ProtectedRoute>} />
               <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-              <Route path="/ai-picks" element={<ProtectedRoute><AIRecommendations /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

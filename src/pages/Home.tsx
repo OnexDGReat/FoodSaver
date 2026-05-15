@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { Search, MapPin, Bell, ShoppingCart, Timer, TrendingDown, Leaf, X, Plus, CheckCircle2, Sparkles, ArrowRight as ArrowRightIcon } from 'lucide-react';
+import { Search, MapPin, Bell, ShoppingCart, Timer, TrendingDown, Leaf, X, Plus, CheckCircle2 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -121,38 +121,6 @@ export function Home() {
           navigate('/explore', { state: { category: cat } });
         }} 
       />
-
-      {/* AI Recommendation Banner */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        onClick={() => navigate('/ai-picks')}
-        className="relative overflow-hidden p-6 rounded-[32px] bg-gradient-to-br from-gray-900 to-gray-800 text-white shadow-2xl shadow-gray-900/20 cursor-pointer group"
-      >
-        <div className="relative z-10 space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white">
-              <Sparkles size={18} />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">New Feature</span>
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-xl font-black italic">Meal Matching AI</h3>
-            <p className="text-gray-400 text-sm font-medium leading-relaxed">
-              Find your perfect rescue meal with Gemini AI.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest pt-2">
-            <span>Try it now</span>
-            <ArrowRightIcon size={14} className="group-hover:translate-x-1 transition-transform" />
-          </div>
-        </div>
-        
-        <Sparkles 
-          size={120} 
-          className="absolute -right-8 -bottom-8 text-white/5 rotate-12 group-hover:scale-110 transition-transform duration-500" 
-        />
-      </motion.div>
 
       {/* Ending Soon */}
       <section className="flex flex-col gap-4">
